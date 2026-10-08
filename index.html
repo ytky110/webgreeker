@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebGreeker</title>
+  <style>
+    body {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: sans-serif;
+    }
+    section { margin: 1rem 0; }
+    label { display: block; font-weight: bold; margin-bottom: .4rem; }
+    textarea {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 9rem;
+      font: 1rem monospace;
+      resize: vertical;
+    }
+    #args { min-height: 7rem; }
+    pre {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 10rem;
+      margin: 0;
+      padding: .8rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      background: #eee;
+      font: 1rem monospace;
+    }
+    button {
+      padding: .5rem 1rem;
+      font-size: 1rem;
+    }
+    #status { margin-left: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Web CLI Runner</h1>
+
+  <section>
+    <label for="stdin">stdin</label>
+    <textarea id="stdin" placeholder="プログラムに渡す標準入力"></textarea>
+  </section>
+
+  <button id="run">実行</button>
+  <span id="status"></span>
+
+  <section>
+    <label>stdout</label>
+    <pre id="stdout"></pre>
+  </section>
+
+  <section>
+    <label>stderr</label>
+    <pre id="stderr"></pre>
+  </section>
+
+  <script type="module">
+    /*
+     * Emscripten:
+     *
+     *   em++ main.cpp -o cli.js \\
+     *       -s MODULARIZE=1 \\
+     *       -s EXPORT_ES6=1
+     *
+     * で作った cli.js を同じディレクトリに置く。
+     */
+    import createCLI from "./cli.js";
+
+    const stdinElement = document.getElementById("stdin");
+    const stdoutElement = document.getElementById("stdout");
+    const stderrElement = document.getElementById("stderr");
+    const runButton = document.getElementById("run");
+    const status = document.getElementById("status");
+
+    runButton.addEventListener("click", async () => {
+      stdoutElement.textContent = "";
+      stderrElement.textContent = "";
+      status.textContent = "実行中…";
+      runButton.disabled = true;
+
+      /*
+      // 1行を1つのargvとして扱う。
+      // 空行も空文字列のargvとして残す。
+      const args = argsElement.value.split("\n");
+       */
+
+      const args = "";
+      // 入力を文字コード列にしておく。
+      // EOFになるとnullを返す。
+      const input = stdinElement.value + "\n";
+      let inputPos = 0;
+
+      try {
+        const module = await createCLI({
+          arguments: args,
+
+          stdin: () => {
+            if (inputPos >= input.length)
+              return null;
+
+            return input.charCodeAt(inputPos++);
+          },
+
+          print: (text) => {
+            stdoutElement.textContent += text + "\n";
+          },
+
+          printErr: (text) => {
+            stderrElement.textContent += text + "\n";
+          },
+
+          onExit: (code) => {
+            status.textContent = `終了: ${code}`;
+          }
+        });
+
+        // MODULARIZEされたEmscriptenでは、main()の終了時に
+        // onExitが呼ばれる。ここは念のため。
+        if (status.textContent === "実行中…")
+          status.textContent = "終了";
+      } catch (error) {
+        stderrElement.textContent += String(error) + "\n";
+        status.textContent = "実行失敗";
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
