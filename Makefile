@@ -8,4 +8,3 @@ greeker/src:
 
 clean:
 	rm -rf greeker
-	rm -f cli.*
