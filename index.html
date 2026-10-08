@@ -44,10 +44,10 @@
 
   <section>
     <label for="stdin">stdin</label>
-    <textarea id="stdin" placeholder="プログラムに渡す標準入力"></textarea>
+    <textarea id="stdin" placeholder="input for program"></textarea>
   </section>
 
-  <button id="run">実行</button>
+  <button id="run">Execute</button>
   <span id="status"></span>
 
   <section>
@@ -81,7 +81,7 @@
     runButton.addEventListener("click", async () => {
       stdoutElement.textContent = "";
       stderrElement.textContent = "";
-      status.textContent = "実行中…";
+      status.textContent = "Executing...";
       runButton.disabled = true;
 
       /*
@@ -116,17 +116,17 @@
           },
 
           onExit: (code) => {
-            status.textContent = `終了: ${code}`;
+            status.textContent = `Finished: ${code}`;
           }
         });
 
         // MODULARIZEされたEmscriptenでは、main()の終了時に
         // onExitが呼ばれる。ここは念のため。
-        if (status.textContent === "実行中…")
-          status.textContent = "終了";
+        if (status.textContent === "Executing...")
+          status.textContent = "Finished";
       } catch (error) {
         stderrElement.textContent += String(error) + "\n";
-        status.textContent = "実行失敗";
+        status.textContent = "Failed";
       } finally {
         runButton.disabled = false;
       }
